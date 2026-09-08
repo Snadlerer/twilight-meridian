@@ -58,7 +58,7 @@ export const useGame = create<GameState>((set, get) => ({
   report: null,
   beatIndex: 0,
   muted: false,
-  music: 0.45,
+  music: 0.5,
   sfx: 0.7,
   settingsOpen: false,
   sideDraft: "compact",
@@ -206,6 +206,7 @@ export const useGame = create<GameState>((set, get) => ({
   },
 
   toggleMute: () => {
+    resumeAudio();
     const next = !get().muted;
     setMuted(next);
     set({ muted: next });

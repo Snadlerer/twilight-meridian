@@ -21,13 +21,20 @@ export function GameApp() {
 
   useEffect(() => {
     boot();
+    const unlock = () => resumeAudio();
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
     const onVis = () => {
       if (document.visibilityState === "visible") resumeAudio();
       const { world, ops, phase: p } = useGame.getState();
       if (world && p !== "title") persistGame(world, ops);
     };
     document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, [boot]);
 
   useEffect(() => {

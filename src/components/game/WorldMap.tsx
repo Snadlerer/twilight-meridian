@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ATLAS, MAP_H, MAP_W, nationAt } from "@/game/atlas";
+import { ATLAS, COMPASS, MAP_H, MAP_W, RIVERS, nationAt } from "@/game/atlas";
 import { COL, mix3, nationRgb, rgb } from "@/game/colors";
 import { coreVitalState } from "@/game/generateWorld";
 import type { Country, Op, OpType, Side, World, YearBeat } from "@/game/types";
@@ -13,6 +13,11 @@ function pathRings(ctx: CanvasRenderingContext2D, rings: number[][][]) {
     for (let i = 1; i < ring.length; i++) ctx.lineTo(ring[i]![0]!, ring[i]![1]!);
     ctx.closePath();
   }
+}
+
+function fillNation(ctx: CanvasRenderingContext2D, rings: number[][][]) {
+  pathRings(ctx, rings);
+  ctx.fill("evenodd");
 }
 
 function pathAllLand(ctx: CanvasRenderingContext2D) {
@@ -39,31 +44,56 @@ const oceanBuf = { current: null as HTMLCanvasElement | null };
 const landBuf = { current: null as HTMLCanvasElement | null };
 const landKey = { current: "" };
 
-function bakeOcean(ocean: HTMLImageElement | null): HTMLCanvasElement {
+function bakeOcean(ocean: HTMLImageElement | null, atlas: HTMLImageElement | null): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = MAP_W;
   c.height = MAP_H;
   const g = c.getContext("2d")!;
   const grd = g.createLinearGradient(0, 0, 0, MAP_H);
-  grd.addColorStop(0, "rgb(32, 68, 74)");
-  grd.addColorStop(0.5, "rgb(18, 44, 50)");
-  grd.addColorStop(1, "rgb(12, 32, 38)");
+  grd.addColorStop(0, "rgb(48, 78, 82)");
+  grd.addColorStop(0.18, "rgb(28, 62, 68)");
+  grd.addColorStop(0.55, "rgb(16, 42, 48)");
+  grd.addColorStop(1, "rgb(12, 30, 36)");
   g.fillStyle = grd;
   g.fillRect(0, 0, MAP_W, MAP_H);
-  if (ocean) {
+  if (atlas && atlas.complete && atlas.naturalWidth) {
+    g.globalAlpha = 0.28;
+    g.drawImage(atlas, 0, 0, MAP_W, MAP_H);
+    g.globalAlpha = 1;
+    g.fillStyle = "rgba(8, 28, 34, 0.32)";
+    g.fillRect(0, 0, MAP_W, MAP_H);
+  } else if (ocean && ocean.complete && ocean.naturalWidth) {
+    g.globalAlpha = 0.42;
     g.drawImage(ocean, 0, 0, MAP_W, MAP_H);
-    g.fillStyle = "rgba(14, 34, 40, 0.18)";
+    g.globalAlpha = 1;
+    g.fillStyle = "rgba(10, 32, 38, 0.28)";
     g.fillRect(0, 0, MAP_W, MAP_H);
   }
-  const ice = g.createLinearGradient(0, 0, 0, 220);
-  ice.addColorStop(0, "rgba(210, 220, 224, 0.28)");
-  ice.addColorStop(1, "rgba(210, 220, 224, 0)");
+  g.strokeStyle = "rgba(210, 224, 220, 0.09)";
+  g.lineWidth = 1;
+  for (let y = 70; y < MAP_H; y += 70) {
+    g.beginPath();
+    g.moveTo(0, y);
+    g.lineTo(MAP_W, y);
+    g.stroke();
+  }
+  for (let x = 80; x < MAP_W; x += 80) {
+    g.beginPath();
+    g.moveTo(x, 0);
+    g.lineTo(x, MAP_H);
+    g.stroke();
+  }
+  const ice = g.createLinearGradient(0, 0, 0, 160);
+  ice.addColorStop(0, "rgba(220, 228, 230, 0.38)");
+  ice.addColorStop(1, "rgba(220, 228, 230, 0)");
   g.fillStyle = ice;
-  g.fillRect(0, 0, MAP_W, 220);
+  g.fillRect(0, 0, MAP_W, 160);
+  g.fillStyle = "rgba(8, 22, 26, 0.18)";
+  g.fillRect(0, MAP_H - 90, MAP_W, 90);
   return c;
 }
 
-function bakeLand(world: World, paper: HTMLImageElement | null): HTMLCanvasElement {
+function bakeLand(world: World, paper: HTMLImageElement | null, atlas: HTMLImageElement | null): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = MAP_W;
   c.height = MAP_H;
@@ -71,21 +101,20 @@ function bakeLand(world: World, paper: HTMLImageElement | null): HTMLCanvasEleme
   for (const a of ATLAS) {
     const ctry = world.countries[a.id - 1];
     if (!ctry) continue;
-    pathRings(g, a.polygons);
     g.fillStyle = rgb(atlasFill(ctry));
-    g.fill();
-    if (paper) {
+    fillNation(g, a.polygons);
+    if (paper && paper.complete && paper.naturalWidth) {
       g.save();
       pathRings(g, a.polygons);
-      g.clip();
-      g.globalAlpha = 0.35;
+      g.clip("evenodd");
+      g.globalAlpha = 0.32;
       g.drawImage(paper, 0, 0, MAP_W, MAP_H);
       g.restore();
     }
     if (ctry.patron && !ctry.isSuper) {
       g.save();
       pathRings(g, a.polygons);
-      g.clip();
+      g.clip("evenodd");
       g.strokeStyle = "rgba(18,16,14,0.22)";
       g.lineWidth = 1.4;
       for (let x = -MAP_H; x < MAP_W + MAP_H; x += 7) {
@@ -99,8 +128,12 @@ function bakeLand(world: World, paper: HTMLImageElement | null): HTMLCanvasEleme
   }
   g.lineJoin = "round";
   g.lineCap = "round";
+  g.strokeStyle = "rgba(140, 186, 180, 0.38)";
+  g.lineWidth = 11;
+  pathAllLand(g);
+  g.stroke();
   g.strokeStyle = "rgba(232, 214, 168, 0.95)";
-  g.lineWidth = 4.2;
+  g.lineWidth = 3.4;
   pathAllLand(g);
   g.stroke();
   g.strokeStyle = "rgba(18, 16, 14, 0.72)";
@@ -127,6 +160,25 @@ function bakeLand(world: World, paper: HTMLImageElement | null): HTMLCanvasEleme
     g.stroke();
   }
   g.setLineDash([]);
+  if (atlas && atlas.complete && atlas.naturalWidth) {
+    g.save();
+    pathAllLand(g);
+    g.clip();
+    g.globalAlpha = 0.32;
+    g.globalCompositeOperation = "multiply";
+    g.drawImage(atlas, 0, 0, MAP_W, MAP_H);
+    g.restore();
+  }
+  g.strokeStyle = "rgba(36, 72, 78, 0.72)";
+  g.lineWidth = 1.6;
+  g.lineCap = "round";
+  for (const river of RIVERS) {
+    if (river.length < 2) continue;
+    g.beginPath();
+    g.moveTo(river[0]![0]!, river[0]![1]!);
+    for (let i = 1; i < river.length; i++) g.lineTo(river[i]![0]!, river[i]![1]!);
+    g.stroke();
+  }
   return c;
 }
 
@@ -142,7 +194,11 @@ export function WorldMap() {
   const phase = useGame((s) => s.phase);
   const report = useGame((s) => s.report);
   const beatIndex = useGame((s) => s.beatIndex);
-  const imgs = useRef<{ ocean: HTMLImageElement | null; paper: HTMLImageElement | null }>({ ocean: null, paper: null });
+  const imgs = useRef<{ ocean: HTMLImageElement | null; paper: HTMLImageElement | null; atlas: HTMLImageElement | null }>({
+    ocean: null,
+    paper: null,
+    atlas: null,
+  });
   const cam = useRef({ x: 0, y: 0, k: 1 });
   const beatMs = useRef(0);
   const lastT = useRef(0);
@@ -161,6 +217,7 @@ export function WorldMap() {
     };
     imgs.current.ocean = load("/art/ocean.jpg");
     imgs.current.paper = load("/art/parchment.jpg");
+    imgs.current.atlas = load("/art/title.jpg");
   }, []);
 
   useEffect(() => {
@@ -197,10 +254,10 @@ export function WorldMap() {
       lastT.current = t;
       const wld = useGame.getState().world;
       if (wld) {
-        if (!oceanBuf.current) oceanBuf.current = bakeOcean(imgs.current.ocean);
+        if (!oceanBuf.current) oceanBuf.current = bakeOcean(imgs.current.ocean, imgs.current.atlas);
         const key = wld.countries.map((c) => `${c.patron}:${c.isSuper}:${c.rogue ? 1 : 0}:${Math.round(c.alignment / 3)}`).join("|");
         if (!landBuf.current || landKey.current !== key) {
-          landBuf.current = bakeLand(wld, imgs.current.paper);
+          landBuf.current = bakeLand(wld, imgs.current.paper, imgs.current.atlas);
           landKey.current = key;
         }
         const st = useGame.getState();
@@ -351,9 +408,9 @@ function draw(
     if (neu) coach(ctx, neu, "A neutral. Read morale. Then press.", cam.k);
   }
 
-  drawCompass(ctx, 168, 575);
-  drawCartouche(ctx, 46, 700);
-  drawScale(ctx, 46, 802);
+  drawCompass(ctx, COMPASS[0], COMPASS[1]);
+  drawCartouche(ctx, 36, 36);
+  drawScale(ctx, 36, 848);
   ctx.restore();
 }
 
@@ -422,7 +479,7 @@ function drawBeatFx(ctx: CanvasRenderingContext2D, world: World, beat: YearBeat,
   ctx.save();
   pathRings(ctx, a.polygons);
   ctx.fillStyle = beat.blocked ? `rgba(184,92,74,${0.18 * (1 - age)})` : `rgba(232,214,168,${0.16 * (1 - age)})`;
-  ctx.fill();
+  ctx.fill("evenodd");
   ctx.beginPath();
   ctx.arc(c.cx, c.cy, (18 + age * 40) / Math.sqrt(k), 0, Math.PI * 2);
   ctx.strokeStyle = beat.blocked ? `rgba(184,92,74,${0.95 - age * 0.4})` : `rgba(232,214,168,${0.95 - age * 0.3})`;
