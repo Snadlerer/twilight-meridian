@@ -1,0 +1,53 @@
+{
+  "name": "twilight-meridian-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "productName": "Twilight Meridian",
+  "description": "A cold-war staff-atlas strategy game.",
+  "author": "Twilight Meridian",
+  "scripts": {
+    "pack": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --mac --publish never"
+  },
+  "devDependencies": {
+    "electron": "^37.3.1",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.twilightmeridian.desk",
+    "productName": "Twilight Meridian",
+    "copyright": "Twilight Meridian",
+    "asar": true,
+    "directories": {
+      "output": "../artifacts/desktop",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.mjs",
+      "www/**/*",
+      "build/icon.png"
+    ],
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        { "target": "portable", "arch": ["x64"] },
+        { "target": "zip", "arch": ["x64"] }
+      ],
+      "artifactName": "TwilightMeridian-Windows-${arch}.${ext}"
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "identity": null,
+      "target": [
+        { "target": "zip", "arch": ["x64", "arm64"] }
+      ],
+      "category": "public.app-category.games",
+      "artifactName": "TwilightMeridian-macOS-${arch}.${ext}"
+    },
+    "extraFiles": [
+      { "from": "README-DESKTOP.txt", "to": "README.txt" }
+    ],
+    "electronVersion": "37.3.1"
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+desktop/node_modules/
+desktop/www/
+dist/
+.vercel/
+.output/
+.tanstack/
+.grok/
+*.log
+.DS_Store
+artifacts/
+screenshots/
